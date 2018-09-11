@@ -29,6 +29,7 @@ namespace Accord.Imaging.Filters
     using AForge;
     using Accord.Imaging;
     using Accord.Imaging.Filters;
+    using System.Linq;
 
     /// <summary>
     ///   Filter to mark (highlight) points in a image.
@@ -68,7 +69,7 @@ namespace Accord.Imaging.Filters
         private Color markerColor = Color.White;
         private IEnumerable<IntPoint> points;
         private Dictionary<PixelFormat, PixelFormat> formatTranslations = new Dictionary<PixelFormat, PixelFormat>();
-
+        private bool connect;
 
         /// <summary>
         ///   Format translations dictionary.
@@ -100,6 +101,17 @@ namespace Accord.Imaging.Filters
         }
 
         /// <summary>
+        /// Gets or sets a value indicating whether the points 
+        /// should be connected by line segments. Default is false.
+        /// </summary>
+        /// 
+        public bool Connect
+        {
+            get { return connect; }
+            set { connect = value; }
+        }
+
+        /// <summary>
         ///   Gets or sets the width of the points to be drawn.
         /// </summary>
         /// 
@@ -113,7 +125,7 @@ namespace Accord.Imaging.Filters
         ///   Initializes a new instance of the <see cref="PointsMarker"/> class.
         /// </summary>
         /// 
-        public PointsMarker(IList<IFeaturePoint> points)
+        public PointsMarker(IEnumerable<IFeaturePoint> points)
             : this(points, Color.White, 3)
         {
         }
@@ -123,7 +135,7 @@ namespace Accord.Imaging.Filters
         ///   Initializes a new instance of the <see cref="PointsMarker"/> class.
         /// </summary>
         /// 
-        public PointsMarker(IList<IFeaturePoint> points, Color markerColor)
+        public PointsMarker(IEnumerable<IFeaturePoint> points, Color markerColor)
             : this(points, markerColor, 3)
         {
         }
@@ -132,10 +144,9 @@ namespace Accord.Imaging.Filters
         ///   Initializes a new instance of the <see cref="PointsMarker"/> class.
         /// </summary>
         /// 
-        public PointsMarker(IList<IFeaturePoint> points, Color markerColor, int width)
+        public PointsMarker(IEnumerable<IFeaturePoint> points, Color markerColor, int width)
         {
-            var newPoints = points.Apply(x => new IntPoint((int)x.X, (int)x.Y));
-            markerColor = init(newPoints, markerColor, width);
+            markerColor = init(points.Select(x => new IntPoint((int)x.X, (int)x.Y)), markerColor, width);
         }
 
         /// <summary>
@@ -209,10 +220,17 @@ namespace Accord.Imaging.Filters
         ///
         protected override unsafe void ProcessFilter(UnmanagedImage image)
         {
-            // mark all points
-            foreach (IntPoint p in points)
+            if (Connect)
             {
-                Drawing.FillRectangle(image, new Rectangle(p.X - width / 2, p.Y - width / 2, width, width), markerColor);
+                Drawing.Polygon(image, points.ToList(), markerColor);
+            }
+            else
+            {
+                // mark all points
+                foreach (IntPoint p in points)
+                {
+                    Drawing.FillRectangle(image, new Rectangle(p.X - width / 2, p.Y - width / 2, width, width), markerColor);
+                }
             }
         }
     }
